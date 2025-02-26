@@ -1,7 +1,7 @@
 
 import streamlit as st
 import pandas as pd
-from deepseek import Deepseek
+#from deepseek import Deepseek
 from pyvis.network import Network
 import matplotlib.pyplot as plt
 
