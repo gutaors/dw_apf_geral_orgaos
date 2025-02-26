@@ -115,7 +115,31 @@ def main():
         if row['ORG_PADR_SIGLA.1'] in df_orgaos_subordinados_filtrado[df_orgaos_subordinados_filtrado['ORGAO_UNIFICADO_FONTE'] == 'SIORG']['ORG_PADR_SIGLA.1'].values:
             orgaos_subordinados_unicos.loc[index, 'OK_SIORG'] = True
     
-
+    # somente se estiver algum falso, mostrar a sugestão de comando insert into
+    if not orgaos_subordinados_unicos['OK_SIAPE'].all() or not orgaos_subordinados_unicos['OK_SIAFI'].all() or not orgaos_subordinados_unicos['OK_SIORG'].all():
+        inserts_siape = ',\n'.join(orgaos_subordinados_unicos[~orgaos_subordinados_unicos['OK_SIAPE']].apply(lambda x: f"(<MAX ORGAO_UNIDICADO_ID + 1>, <CODIGO_ORGAO_SIAPE>, '{x['ORG_PADR_NOME.1']}', '{x['ORG_PADR_SIGLA.1']}', 'ATIVO', 'SIAPE', 0, 0, {x['ORG_PADR_ID.1']}, GETDATE(), GETDATE())", axis=1).tolist())
+        inserts_siafi = ',\n'.join(orgaos_subordinados_unicos[~orgaos_subordinados_unicos['OK_SIAFI']].apply(lambda x: f"(<MAX ORGAO_UNIDICADO_ID + 1>, <COGIDO_ORGAO_SIAFI>, '{x['ORG_PADR_NOME.1']}', '{x['ORG_PADR_SIGLA.1']}', 'ATIVO', 'SIAFI', 0, 0, {x['ORG_PADR_ID.1']}, GETDATE(), GETDATE())", axis=1).tolist())
+        inserts_siorg = ',\n'.join(orgaos_subordinados_unicos[~orgaos_subordinados_unicos['OK_SIORG']].apply(lambda x: f"(<MAX ORGAO_UNIDICADO_ID + 1>, <CODIGO_ORGAO_SIORG>, '{x['ORG_PADR_NOME.1']}', '{x['ORG_PADR_SIGLA.1']}', 'ATIVO', 'SIORG', 0, 0, {x['ORG_PADR_ID.1']}, GETDATE(), GETDATE())", axis=1).tolist())
+        
+        st.write("Sugestão de Inserts para correção:")
+        st.code(f"""
+        INSERT INTO PGG_DW.DW_APF_GERAL.DM_ORGAO_UNIFICADO_NOVO
+                    ( ORGAO_UNIFICADO_ID
+                    , ORGAO_UNIFICADO_ID_ORIGEM
+                    , ORGAO_UNIFICADO_NOME
+                    , ORGAO_UNIFICADO_SIGLA
+                    , ORGAO_UNIFICADO_SITUACAO
+                    , ORGAO_UNIFICADO_FONTE
+                    , ORGAO_UNIFICADO_COD_SIORG_ORIGEM
+                    , ORGAO_PADRONIZADO_ID
+                    , ORG_PADR_ID
+                    , ORGAO_UNIFICADO_DT_ATUALIZACAO
+                    , ORGAO_UNIFICADO_DT_INCLUSAO)
+        VALUES
+        {inserts_siape},
+        {inserts_siafi},
+        {inserts_siorg};
+        """)
     # Mostrar os dados
     st.subheader("Lista de Órgãos Subordinados Únicos")
     st.dataframe(orgaos_subordinados_unicos)
@@ -129,16 +153,7 @@ def main():
         st.write(f"Fonte: {fonte}")
         df_filtrado_por_fonte = df_orgaos_subordinados_filtrado[df_orgaos_subordinados_filtrado['ORGAO_UNIFICADO_FONTE'] == fonte]
         st.dataframe(df_filtrado_por_fonte)
-    
-    # campo para sugestão de insert que possa ser copiado st.code()
-    st.write("Sugestão de comando SQL para inserir os órgãos subordinados selecionados:")
-    st.code(f"""
-    INSERT INTO DM_ORGAO_UNIFICADO_NOVO (ORG_PADR_ID, ORG_PADR_SIGLA, ORG_PADR_NOME, ORGAO_UNIFICADO_ID_ORIGEM, ORGAO_UNIFICADO_NOME, ORGAO_UNIFICADO_FONTE)
-            VALUES ({orgao_id}, 'SIGLA', 'NOME', 'ID_ORIGEM', 'NOME', 'FONTE');
-    """)    
 
-
- 
     # Plotar o grafo
     plot_graph(df_orgaos_superiores_filtrado, df_orgaos_subordinados_filtrado)
 
