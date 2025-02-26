@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 #file_3 = '/Users/luisjesus/Downloads/ORGAOS_DW_APF_GERAL.csv'
 file_3 = 'ORGAOS_DW_APF_GERAL.csv'
 
-
 # Função para carregar e mostrar os dados
 def load_data():
     # Carregar o arquivo
@@ -102,6 +101,22 @@ def main():
     orgao_subordinado_ids = [int(org.split(' - ')[0]) for org in orgao_subordinado]
     df_orgaos_subordinados_filtrado = df_orgaos_subordinados_filtrado[df_orgaos_subordinados_filtrado['ORG_PADR_ID.1'].isin(orgao_subordinado_ids)]
 
+   # criar 3 colunas ok siape, ok siape e OK SIAFI, OK SIORG e OK SIAPE na tabela de orgaos subordinados filtrados com valor original de negação
+    orgaos_subordinados_unicos['OK_SIAPE'] = False
+    orgaos_subordinados_unicos['OK_SIAFI'] = False
+    orgaos_subordinados_unicos['OK_SIORG'] = False
+
+    # ver se a sigla do orgao subordinado está na tabela de orgaos subordinados filtrados e se sim, setar o valor da coluna correspondente para True
+    for index, row in orgaos_subordinados_unicos.iterrows():
+        if row['ORG_PADR_SIGLA.1'] in df_orgaos_subordinados_filtrado[df_orgaos_subordinados_filtrado['ORGAO_UNIFICADO_FONTE'] == 'SIAPE']['ORG_PADR_SIGLA.1'].values:
+            orgaos_subordinados_unicos.loc[index, 'OK_SIAPE'] = True
+        if row['ORG_PADR_SIGLA.1'] in df_orgaos_subordinados_filtrado[df_orgaos_subordinados_filtrado['ORGAO_UNIFICADO_FONTE'] == 'SIAFI']['ORG_PADR_SIGLA.1'].values:
+            orgaos_subordinados_unicos.loc[index, 'OK_SIAFI'] = True
+        if row['ORG_PADR_SIGLA.1'] in df_orgaos_subordinados_filtrado[df_orgaos_subordinados_filtrado['ORGAO_UNIFICADO_FONTE'] == 'SIORG']['ORG_PADR_SIGLA.1'].values:
+            orgaos_subordinados_unicos.loc[index, 'OK_SIORG'] = True
+    
+
+    # Mostrar os dados
     st.subheader("Lista de Órgãos Subordinados Únicos")
     st.dataframe(orgaos_subordinados_unicos)
     
@@ -114,7 +129,14 @@ def main():
         st.write(f"Fonte: {fonte}")
         df_filtrado_por_fonte = df_orgaos_subordinados_filtrado[df_orgaos_subordinados_filtrado['ORGAO_UNIFICADO_FONTE'] == fonte]
         st.dataframe(df_filtrado_por_fonte)
-        # campo para sugestão de insert que possa ser copiado
+    
+    # campo para sugestão de insert que possa ser copiado st.code()
+    st.write("Sugestão de comando SQL para inserir os órgãos subordinados selecionados:")
+    st.code(f"""
+    INSERT INTO DM_ORGAO_UNIFICADO_NOVO (ORG_PADR_ID, ORG_PADR_SIGLA, ORG_PADR_NOME, ORGAO_UNIFICADO_ID_ORIGEM, ORGAO_UNIFICADO_NOME, ORGAO_UNIFICADO_FONTE)
+            VALUES ({orgao_id}, 'SIGLA', 'NOME', 'ID_ORIGEM', 'NOME', 'FONTE');
+    """)    
+
 
  
     # Plotar o grafo
