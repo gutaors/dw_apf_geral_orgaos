@@ -6,7 +6,8 @@ from pyvis.network import Network
 import matplotlib.pyplot as plt
 
 # Caminho do novo arquivo
-file_3 = '/Users/luisjesus/Downloads/ORGAOS_DW_APF_GERAL.csv'
+#file_3 = '/Users/luisjesus/Downloads/ORGAOS_DW_APF_GERAL.csv'
+file_3 = 'ORGAOS_DW_APF_GERAL.csv'
 
 
 # Função para carregar e mostrar os dados
