@@ -1,9 +1,9 @@
 
 import streamlit as st
 import pandas as pd
-#from deepseek import Deepseek
 from pyvis.network import Network
-import matplotlib.pyplot as plt
+from sentence_transformers import SentenceTransformer, util
+import torch
 
 # Caminho do novo arquivo
 #file_3 = '/Users/luisjesus/Downloads/ORGAOS_DW_APF_GERAL.csv'
