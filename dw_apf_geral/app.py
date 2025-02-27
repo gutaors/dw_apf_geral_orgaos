@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from pyvis.network import Network
@@ -6,7 +5,6 @@ from sentence_transformers import SentenceTransformer, util
 import torch
 
 # Caminho do novo arquivo
-#file_3 = '/Users/luisjesus/Downloads/ORGAOS_DW_APF_GERAL.csv'
 file_dw_apf_geral = 'ORGAOS_DW_APF_GERAL.csv'
 file_dwtg_siafi = 'ORGAOS_DWTG_SIAFI.csv'
 
@@ -52,13 +50,17 @@ def plot_graph(df_superiores, df_subordinados):
     net.show("graph.html")
     st.components.v1.html(open("graph.html", 'r', encoding='utf-8').read(), height=600)
 
-# Função para buscar dados no df_orgaos_siafi usando similaridade semântica
-def buscar_semantica(df_orgaos_siafi, texto_busca, top_n=5):
+def treinar_modelo():
     # Carregar o modelo pré-treinado
     model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
     # Forçar o uso da CPU
     model = model.to('cpu')
+
+    return model
+
+# Função para buscar dados no df_orgaos_siafi usando similaridade semântica
+def buscar_semantica(df_orgaos_siafi, texto_busca, top_n=5, model=None):
 
     # Verifique qual coluna usar para a busca (substitua 'NOME_ORGAO' pelo nome correto)
     coluna_busca = 'NO_UO'  # Substitua pelo nome da coluna correta
@@ -86,6 +88,9 @@ def buscar_semantica(df_orgaos_siafi, texto_busca, top_n=5):
 # Função principal do Streamlit
 def main():
     st.title("Visualização dos Dados dos Órgãos")
+    
+    # Treinar o modelo
+    model = treinar_modelo()
     
     # Carregar os dados
     df_orgaos, df_orgaos_siafi = load_data()
@@ -179,7 +184,7 @@ def main():
         if not orgaos_nao_ok_siafi.empty:
             for index, row in orgaos_nao_ok_siafi.iterrows():
                 st.write(f"Buscando por: {row['ORG_PADR_NOME.1']}")
-                resultados = buscar_semantica(df_orgaos_siafi, row['ORG_PADR_NOME.1'] + ' ' + row['ORG_PADR_SIGLA.1'], top_n=3)
+                resultados = buscar_semantica(df_orgaos_siafi, row['ORG_PADR_NOME.1'] + ' ' + row['ORG_PADR_SIGLA.1'], top_n=3, model=model)
                 st.write("Resultados da Busca Semântica:")
                 st.dataframe(resultados)
 
