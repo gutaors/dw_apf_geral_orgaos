@@ -7,13 +7,15 @@ import matplotlib.pyplot as plt
 
 # Caminho do novo arquivo
 #file_3 = '/Users/luisjesus/Downloads/ORGAOS_DW_APF_GERAL.csv'
-file_3 = 'ORGAOS_DW_APF_GERAL.csv'
+file_dw_apf_geral = 'ORGAOS_DW_APF_GERAL.csv'
+file_dwtg_siafi = 'ORGAOS_DWTG_SIAFI.csv'
 
 # Função para carregar e mostrar os dados
 def load_data():
     # Carregar o arquivo
-    df_orgaos = pd.read_csv(file_3)
-    return df_orgaos
+    df_orgaos = pd.read_csv(file_dw_apf_geral)
+    df_orgaos_siafi = pd.read_csv(file_dwtg_siafi)
+    return df_orgaos, df_orgaos_siafi
 
 # criar subdataframes
 # de orgaos superiores : unique org_padr_id, org_padr_sigla e org_padr_nome
@@ -50,13 +52,43 @@ def plot_graph(df_superiores, df_subordinados):
     net.show("graph.html")
     st.components.v1.html(open("graph.html", 'r', encoding='utf-8').read(), height=600)
 
+# Função para buscar dados no df_orgaos_siafi usando similaridade semântica
+def buscar_semantica(df_orgaos_siafi, texto_busca, top_n=5):
+    # Carregar o modelo pré-treinado
+    model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+
+    # Forçar o uso da CPU
+    model = model.to('cpu')
+
+    # Verifique qual coluna usar para a busca (substitua 'NOME_ORGAO' pelo nome correto)
+    coluna_busca = 'NO_UO'  # Substitua pelo nome da coluna correta
+
+    # Transformar o texto de busca em embedding
+    embedding_busca = model.encode(texto_busca, convert_to_tensor=True)
+
+    # Transformar todos os textos do DataFrame em embeddings
+    df_orgaos_siafi['embedding'] = df_orgaos_siafi[coluna_busca].apply(
+        lambda x: model.encode(str(x), convert_to_tensor=True).cpu().numpy()  # Converter para NumPy array
+    )
+
+    # Calcular a similaridade entre o texto de busca e os textos do DataFrame
+    df_orgaos_siafi['similaridade'] = df_orgaos_siafi['embedding'].apply(
+        lambda x: util.pytorch_cos_sim(embedding_busca, torch.tensor(x)).item()  # Usando CPU
+    )
+
+    # Ordenar o DataFrame pela similaridade
+    df_ordenado = df_orgaos_siafi.sort_values(by='similaridade', ascending=False)
+
+    # Retornar os top_n resultados
+    return df_ordenado.head(top_n)
+
 
 # Função principal do Streamlit
 def main():
     st.title("Visualização dos Dados dos Órgãos")
     
     # Carregar os dados
-    df_orgaos = load_data()
+    df_orgaos, df_orgaos_siafi = load_data()
     # Subdataframes
     df_orgaos_superiores, df_orgaos_subordinados = subdataframes(df_orgaos)
     # KPIs totais de órgãos superiores e subordinados distintos
@@ -140,6 +172,17 @@ def main():
         {inserts_siafi},
         {inserts_siorg};
         """)
+
+        # Busca semântica no df_orgaos_siafi para órgãos subordinados não OK SIAFI
+        st.subheader("Busca Semântica no df_orgaos_siafi para Órgãos Subordinados não OK SIAFI")
+        orgaos_nao_ok_siafi = orgaos_subordinados_unicos[~orgaos_subordinados_unicos['OK_SIAFI']]
+        if not orgaos_nao_ok_siafi.empty:
+            for index, row in orgaos_nao_ok_siafi.iterrows():
+                st.write(f"Buscando por: {row['ORG_PADR_NOME.1']}")
+                resultados = buscar_semantica(df_orgaos_siafi, row['ORG_PADR_NOME.1'] + ' ' + row['ORG_PADR_SIGLA.1'], top_n=3)
+                st.write("Resultados da Busca Semântica:")
+                st.dataframe(resultados)
+
     # Mostrar os dados
     st.subheader("Lista de Órgãos Subordinados Únicos")
     st.dataframe(orgaos_subordinados_unicos)
